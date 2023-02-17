@@ -8,7 +8,6 @@
   - Google Colab
   - Python 3.8.10
   - Sklearn 1.2.1
-  - CatBoost 1.1.1
   - XGBoost 0.90
 
 ---
