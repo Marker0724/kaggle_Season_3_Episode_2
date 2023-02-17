@@ -128,8 +128,8 @@ enc_num_test = MinMaxScaler().fit_transform(test[num_datas])
 ```
 
 ## 데이터 병합
-- df의 데이터와 CSR 데이터가 합병 => CSR로 합병
-  - train
+### df의 데이터와 CSR 데이터가 합병 => CSR로 합병
+- train
     - train[bin_features].shape : (20414, 5)
     - enc_nom_train.shape : (20414, 9)
     - enc_num_train.shape : (20414, 3)
@@ -142,10 +142,10 @@ final_train_data_csr = sparse.hstack( [
 ], format='csr')
 ```
 
-   - test
-      - test[bin_features].shape : (10204, 5)
-      - enc_nom_test.shape : (10204, 9)
-      - enc_num_test.shape : (10204, 3)
+- test
+    - test[bin_features].shape : (10204, 5)
+    - enc_nom_test.shape : (10204, 9)
+    - enc_num_test.shape : (10204, 3)
 ```
 final_test_data_csr = sparse.hstack( [
     test[bin_features],        # 'hypertension', 'heart_disease', 'ever_married', 'Residence_type', 'gender' 
@@ -157,8 +157,7 @@ final_test_data_csr = sparse.hstack( [
 
 ## Modeling
 
-- 베이스 라인 구축 생략 (Logistic 사용 X)
-- XGBoost 모델 사용
+- 최종 XGBoost 모델 사용
 
 ```
 X = final_train_data_csr
