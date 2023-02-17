@@ -74,8 +74,6 @@ train = pd.concat([train, original_data]).reset_index(drop=True)
 
 ## Data Encoding
 
-- 원-핫 인코딩 X => CatBoost는 범주형 데이터 인코딩을 자체적으로 해준다.
-
 ### 불필요 데이터 처리 및 이진형 데이터 인코딩
 
 - 이진형 데이터 0과 1로 변환 ('gender'에서 'Other' 값 처리)
