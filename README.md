@@ -83,10 +83,12 @@ bin_enc_feats = ['ever_married', 'Residence_type', 'gender']
 
 train[bin_enc_feats[2]].mode()[0], test[bin_enc_feats[2]].mode()[0]
 
-# 'gender'에서 'Other' 값 처리 Female이 최빈값으로 나온다.
+# Female이 최빈값으로 나온다.
 ```
 
 ```
+# 'Other' 최빈값으로 처리
+# 기타 이진형 데이터 0과 1로 처리
 train[bin_enc_feats[0]] = train[bin_enc_feats[0]].map({'Yes':1, 'No':0})
 train[bin_enc_feats[1]] = train[bin_enc_feats[1]].map({'Urban':1, 'Rural':0})
 train[bin_enc_feats[2]] = train[bin_enc_feats[2]].map({'Male':1, 'Female':0, 'Other':0})
@@ -139,6 +141,7 @@ final_train_data_csr = sparse.hstack( [
     enc_num_train               # 'age', 'avg_glucose_level', 'bmi' 
 ], format='csr')
 ```
+
    - test
       - test[bin_features].shape : (10204, 5)
       - enc_nom_test.shape : (10204, 9)
