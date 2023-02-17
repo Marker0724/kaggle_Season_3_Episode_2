@@ -1,6 +1,8 @@
 # Sk Shieldus Rookies 머신러닝 미니 프로젝트 (5조)
 
 ## Kaggle Season 3, Episode 2
+- Tabular Classification with a Stroke Prediction Dataset
+- https://www.kaggle.com/competitions/playground-series-s3e2
 
 - 실행 환경
   - Google Colab
@@ -35,6 +37,8 @@ original_data = pd.read_csv(data_path + 'healthcare-dataset-stroke-data.csv',ind
 
 - 모델 성능 향상 데이터 추가
 - https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
+- train.shape : (15304, 11)
+- test.shape : (10204, 10)
 
 ### train 데이터
 
@@ -56,131 +60,136 @@ original_data = pd.read_csv(data_path + 'healthcare-dataset-stroke-data.csv',ind
 
 ## Feature Engineering
 ### 추가 데이터 전처리
+- original[bmi] Null 값 채우기
 
 ```
-# ibm 피쳐 개수가 많아 보임 (전처리 수행)
-ibm['Attrition'] = (ibm['Attrition'] == 'Yes').astype(np.int64)
+# original bmi 평균값으로 채움
+original_data["bmi"].fillna(original_data["bmi"].mean(),inplace=True)
+original_data = original_data[list(train.columns)]
 
-ibm.drop(columns="EmployeeNumber", inplace=True)
-
-ibm = ibm[list(train.columns)]
-
-# train + ibm 
-train = pd.concat([train, ibm]).reset_index(drop=True)
+# 훈련 데이터셋 증강
+train = pd.concat([train, original_data]).reset_index(drop=True)
 ```
+- train.shape : (20414, 11)
+- test.shape : (10204, 10)
 
-### 불필요한 데이터 삭제 및 순서형 데이터 정렬
-
-```
-
-# 이상치 제거
-train.drop(train[train['JobLevel']==7].index.tolist() , inplace=True, errors='ignore')
-# DailyRate와 Education에 이상치 제거 (train만, test에는 해당 이상치 없음)
-train.drop([527, 1398], inplace=True)
-
-# 순서형 데이터 정렬
-ord_1 = ['Non-Travel', 'Travel_Rarely', 'Travel_Frequently']
-# 순서생성
-ord_1_dtype = CategoricalDtype(ord_1, True)
-# 순서 적용 -> Dtype 적용
-train['BusinessTravel'] = train['BusinessTravel'].astype(ord_1_dtype)
-```
 ## Data Encoding
 
 - 원-핫 인코딩 X => CatBoost는 범주형 데이터 인코딩을 자체적으로 해준다.
 
-### 이진형 데이터 인코딩
+### 불필요 데이터 처리 및 이진형 데이터 인코딩
 
-- 이진형 데이터 0과 1로 변환
+- 이진형 데이터 0과 1로 변환 ('gender'에서 'Other' 값 처리)
 
 ```
-# train data
-train[bin_datas[0]] = train[bin_datas[0]].map({'Yes':1, 'No':0})
-train[bin_datas[1]] = train[bin_datas[1]].map({'Male':1, 'Female':0})
-train[bin_datas[2]] = train[bin_datas[2]].map({3:1, 4:0})
+bin_enc_feats = ['ever_married', 'Residence_type', 'gender']
 
-# test data
-test[bin_datas[0]] = test[bin_datas[0]].map({'Yes':1, 'No':0})
-test[bin_datas[1]] = test[bin_datas[1]].map({'Male':1, 'Female':0})
-test[bin_datas[2]] = test[bin_datas[2]].map({3:1, 4:0})
+train[bin_enc_feats[2]].mode()[0], test[bin_enc_feats[2]].mode()[0]
+
+# 'gender'에서 'Other' 값 처리 Female이 최빈값으로 나온다.
+```
+
+```
+train[bin_enc_feats[0]] = train[bin_enc_feats[0]].map({'Yes':1, 'No':0})
+train[bin_enc_feats[1]] = train[bin_enc_feats[1]].map({'Urban':1, 'Rural':0})
+train[bin_enc_feats[2]] = train[bin_enc_feats[2]].map({'Male':1, 'Female':0, 'Other':0})
+
+test[bin_enc_feats[0]] = test[bin_enc_feats[0]].map({'Yes':1, 'No':0})
+test[bin_enc_feats[1]] = test[bin_enc_feats[1]].map({'Urban':1, 'Rural':0})
+test[bin_enc_feats[2]] = test[bin_enc_feats[2]].map({'Male':1, 'Female':0, 'Other':0})
 ```
 
 ### 명목형 데이터 인코딩
 
-- 'BusinessTravel' 피쳐는 순서대로 지정을 해도 될 것 같다.
-- 'Non-Travel':0, 'Travel_Rarely':1, 'Travel_Frequently':2 순서대로 인코딩
-- 실제로 여행을 많이 간 순서대로 나열했더니, 결과 값이 올랐다.
-
 ```
-ord_1_dict = { 'Non-Travel':0, 'Travel_Rarely':1, 'Travel_Frequently':2 }
+nom_datas = ['work_type', 'smoking_status']
 
-train['BusinessTravel'] = train['BusinessTravel'].map( ord_1_dict )
-test['BusinessTravel'] = test['BusinessTravel'].map( ord_1_dict )
+# 피쳐가 6개 이하이기 때문에 원-핫 인코딩 처리
+from sklearn.preprocessing import OneHotEncoder
 
-# category => int
-train['BusinessTravel'] = train['BusinessTravel'].astype(int)
-
-test['BusinessTravel'] = test['BusinessTravel'].astype(int)
+enc_nom_train = OneHotEncoder().fit_transform( np.array( train[nom_datas] ) )
+enc_nom_test = OneHotEncoder().fit_transform( np.array( test[nom_datas] ) )
 ```
+- enc_nom_train.shape : (20414, 9)
+- enc_nom_test.shape : (10204, 9)
+
 
 ## Data Scaling
 
-- 순서형, 수치형 -> StandardScaler (평균 0, 표준편차 1이 되도록 모든 값을 조정하여 변환)
-- 학습 시 메모리를 적게 사용하기 위해 스케일링 진행
-- 모델에 따라 스케일링이 결과에 크게 영향을 미치지 않을수도 있다.
+- 수치형 -> MinMaxScaler (최댓값은 1로, 최솟값은 0으로 데이터의 범위를 조정)
+- 데이터와 모델에 맞게 스케일링해주는게 좋다.
+- 실제로 결과 값에 영향을 주는 스케일링이었다.
+- 때에 따라서는 크게 영향이 없을 수도 있다.
 
 ```
-scaler = StandardScaler().fit(train[ord_datas])
-train[ord_datas] = scaler.transform(train[ord_datas])
-test[ord_datas] = scaler.transform(test[ord_datas])
+num_datas = ['age', 'avg_glucose_level', 'bmi' ]
 
-scaler = StandardScaler().fit(train[num_datas])
-train[num_datas] = scaler.transform(train[num_datas])
-test[num_datas] = scaler.transform(test[num_datas])
+enc_num_train = MinMaxScaler().fit_transform(train[num_datas])
+enc_num_test = MinMaxScaler().fit_transform(test[num_datas])
 ```
+
+## 데이터 병합
+- df의 데이터와 CSR 데이터가 합병 => CSR로 합병
+  - train
+    - train[bin_features].shape : (20414, 5)
+    - enc_nom_train.shape : (20414, 9)
+    - enc_num_train.shape : (20414, 3)
+
+```
+final_train_data_csr = sparse.hstack( [
+    train[bin_features],        # 'hypertension', 'heart_disease', 'ever_married', 'Residence_type', 'gender' 
+    enc_nom_train,              # 'work_type', 'smoking_status' 
+    enc_num_train               # 'age', 'avg_glucose_level', 'bmi' 
+], format='csr')
+```
+  - test
+    - test[bin_features].shape : (10204, 5)
+    - enc_nom_test.shape : (10204, 9)
+    - enc_num_test.shape : (10204, 3)
+```
+final_test_data_csr = sparse.hstack( [
+    test[bin_features],        # 'hypertension', 'heart_disease', 'ever_married', 'Residence_type', 'gender' 
+    enc_nom_test,              # 'work_type', 'smoking_status' 
+    enc_num_test               # 'age', 'avg_glucose_level', 'bmi' 
+], format='csr')
+```
+
 
 ## Modeling
 
 - 베이스 라인 구축 생략 (Logistic 사용 X)
-- CatBoost 모델 사용
+- XGBoost 모델 사용
 
 ```
-X = train.drop('Attrition', axis=1)
-y = train['Attrition']
+X = final_train_data_csr
+y = train['stroke']
 
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.1, random_state=0, shuffle=True)
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.14985, random_state=0, shuffle=True)
 
-pool_train = Pool(X_train,y_train,cat_features=cat_features)
-pool_test = Pool(X_test,y_test,cat_features=cat_features)
+eval_set = [(X_test, y_test)]
 
 clf_pram = {
-    'learning_rate':0.1835,
-    'random_seed' : 7,
-    'iterations':200,
-    'loss_function':'Logloss',
-    'depth':2,
-    'subsample':0.89,
-    'verbose':100,
-    'bootstrap_type' : 'Bernoulli', 
-    'l2_leaf_reg' : 7
+    'n_estimators':200,
+    'learning_rate' : 0.1199,
+    'max_depth':2,
+    'subsample':0.88,
+    'n_jobs':-1,
+    'eval_metric':'logloss',
+    'reg_lambda': 15.02,
+    'seed': 9,
+    'colsample_bytree': 0.9,
+    'min_child_weight': 7.7
 }
-cat = CatBoostClassifier(**clf_pram)
-cat.fit(pool_train, eval_set=pool_test, use_best_model=True)
+
+xgb = XGBClassifier(**clf_pram)
+
+xgb.fit( X_train, y_train , verbose=100, early_stopping_rounds=30, eval_set=eval_set)
 ```
 
-### 결과 
-- Private Score : 0.90037 => 12등
-- Public score : 0.94195
-
-## 모델 성능 향상을 위한 Blending
-- https://www.kaggle.com/code/bcruise/starting-strong-xgboost-lightgbm-catboost?scriptVersionId=116642571
-- 1위(XGBoost + LightGBM + CatBoost) + 생성한 모델(CatBoost)
-- 1위의 모델(XGBoost, LightGBM, CatBoost)와 우리팀의 CatBoost모델이 낸 예측값들을 블렌딩
-- 총 네개의 모델(XGBoost, LightGBM, CatBoost2)을 블렌딩한 예측값 `score : 0.90407` (1등)
-```
-final_preds = np.column_stack([xgb_preds, xgb_preds,
-                               cat_preds, local_best['Attrition'].values]).mean(axis=1)
-```
 # 최종 결과
 
-Private Score : 0.90407 (1등)
+- 최종 사용 모델 : XGBoost
+- 최종 결과 (3등, 금메달)
+  - Private Score : 0.90059
+  - Public Score : 0.86477
+
