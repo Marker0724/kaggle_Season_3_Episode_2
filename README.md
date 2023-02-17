@@ -141,10 +141,10 @@ final_train_data_csr = sparse.hstack( [
     enc_num_train               # 'age', 'avg_glucose_level', 'bmi' 
 ], format='csr')
 ```
-  - test
-    - test[bin_features].shape : (10204, 5)
-    - enc_nom_test.shape : (10204, 9)
-    - enc_num_test.shape : (10204, 3)
+    - test
+      - test[bin_features].shape : (10204, 5)
+      - enc_nom_test.shape : (10204, 9)
+      - enc_num_test.shape : (10204, 3)
 ```
 final_test_data_csr = sparse.hstack( [
     test[bin_features],        # 'hypertension', 'heart_disease', 'ever_married', 'Residence_type', 'gender' 
